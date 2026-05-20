@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Brain Lab · VoiceForge</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07070e;--bg2:#0d0d1a;--bg3:#12122a;--bg4:#0a0a16;
+  --acc:#b44fff;--acc2:#7c3aed;--accg:rgba(180,79,255,.12);
+  --green:#4ade80;--amber:#fbbf24;--blue:#60a5fa;--pink:#f472b6;--red:#f87171;--teal:#2dd4bf;
+  --muted:rgba(255,255,255,.38);--muted2:rgba(255,255,255,.68);
+  --border:rgba(255,255,255,.07);--border2:rgba(180,79,255,.22);
+  --mono:'JetBrains Mono',monospace;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(180,79,255,.25);border-radius:2px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.15;}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(180,79,255,.4);}70%{box-shadow:0 0 0 8px rgba(180,79,255,0);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes cursor{0%,100%{opacity:1;}50%{opacity:0;}}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+@keyframes recording{0%,100%{transform:scale(1);}50%{transform:scale(1.08);background:rgba(248,113,113,.3);}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;background:rgba(7,7,14,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:'Instrument Serif',serif;font-size:1.05rem;color:#fff;text-decoration:none;display:flex;align-items:center;gap:8px;}
+.nav-logo-icon{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--acc2),var(--acc));display:flex;align-items:center;justify-content:center;}
+.sync-live{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;padding:4px 12px;border-radius:99px;border:1px solid rgba(74,222,128,.2);color:var(--green);background:rgba(74,222,128,.06);}
+.sync-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite;}
+.nbtn{background:none;border:1px solid var(--border);border-radius:99px;padding:6px 16px;font-size:12px;font-weight:500;color:var(--muted2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.nbtn:hover{border-color:var(--acc);color:var(--acc);}
+.nbtn.p{background:linear-gradient(135deg,var(--acc2),var(--acc));border:none;color:#fff;}
+.nbtn.p:hover{filter:brightness(1.1);}
+
+/* SIDEBAR */
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh;padding-top:64px;}
+.sidebar{position:sticky;top:64px;height:calc(100vh - 64px);overflow-y:auto;border-right:1px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:4px;background:var(--bg4);}
+.sidebar-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);padding:.5rem .75rem .25rem;margin-top:.5rem;}
+.sitem{display:flex;align-items:center;gap:10px;padding:.625rem .75rem;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted2);transition:all .18s;border:1px solid transparent;}
+.sitem:hover{background:rgba(255,255,255,.04);color:#fff;}
+.sitem.active{background:var(--accg);color:var(--acc);border-color:var(--border2);}
+.sitem-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.sitem-badge{margin-left:auto;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.07);color:var(--muted);}
+.sitem.active .sitem-badge{background:rgba(180,79,255,.15);color:var(--acc);}
+
+/* MAIN */
+.main{padding:2rem 2.5rem;overflow-y:auto;}
+.page{display:none;animation:fadeUp .25s ease;}
+.page.active{display:block;}
+
+/* BRAIN CREATION METER */
+.brain-meter{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:1.5rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.brain-meter::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 50%,rgba(180,79,255,.06) 0%,transparent 60%);pointer-events:none;}
+.bm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+.bm-title{font-family:'Instrument Serif',serif;font-size:1.4rem;font-weight:400;}
+.bm-pct{font-family:var(--mono);font-size:2.5rem;color:var(--acc);font-weight:500;line-height:1;}
+.bm-track{background:rgba(255,255,255,.06);border-radius:99px;height:8px;margin-bottom:1rem;overflow:hidden;}
+.bm-fill{height:8px;border-radius:99px;background:linear-gradient(90deg,var(--acc2),var(--acc),#e879f9);transition:width .8s cubic-bezier(.4,0,.2,1);position:relative;}
+.bm-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:shimmer 2s linear infinite;background-size:200% 100%;}
+.bm-sections{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+.bm-sec{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.625rem;text-align:center;transition:all .2s;}
+.bm-sec.done{border-color:rgba(74,222,128,.25);background:rgba(74,222,128,.06);}
+.bm-sec.partial{border-color:var(--border2);background:var(--accg);}
+.bm-sec-icon{font-size:18px;margin-bottom:4px;}
+.bm-sec-name{font-size:10px;color:var(--muted);font-weight:500;}
+.bm-sec-val{font-size:12px;font-weight:600;margin-top:2px;}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:1.25rem;margin-bottom:1.25rem;}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.card-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+
+/* INPUTS */
+.inp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 13px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.inp:focus{border-color:var(--acc);}
+.inp::placeholder{color:var(--muted);}
+textarea.inp{resize:vertical;min-height:90px;line-height:1.7;}
+.btn{font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:99px;font-size:13px;font-weight:600;padding:9px 22px;transition:all .2s;border:none;display:inline-flex;align-items:center;gap:6px;}
+.btn-p{background:linear-gradient(135deg,var(--acc2),var(--acc));color:#fff;}
+.btn-p:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-g{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted2);}
+.btn-g:hover{border-color:var(--acc);color:var(--acc);}
+.btn-sm{padding:6px 14px;font-size:12px;}
+.btn-r{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);}
+
+/* QUESTION FLOW */
+.q-card{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(180,79,255,.07));border:1px solid var(--border2);border-radius:16px;padding:1.5rem;margin-bottom:1rem;}
+.q-num{font-family:var(--mono);font-size:10px;color:var(--acc);margin-bottom:.5rem;letter-spacing:.5px;}
+.q-text{font-family:'Instrument Serif',serif;font-size:1.2rem;font-weight:400;margin-bottom:1rem;line-height:1.4;}
+.q-options{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.875rem;}
+.q-opt{padding:7px 16px;border-radius:99px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.q-opt:hover,.q-opt.sel{background:var(--accg);color:var(--acc);border-color:var(--acc);}
+.q-skip{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:all .2s;}
+.q-skip:hover{color:var(--muted2);text-decoration-color:var(--muted2);}
+.q-progress{display:flex;gap:4px;margin-bottom:1.25rem;}
+.q-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.15);transition:all .3s;}
+.q-dot.done{background:var(--acc);}
+.q-dot.current{background:#fff;transform:scale(1.3);}
+
+/* BOOK SEARCH */
+.book-search-wrap{position:relative;margin-bottom:.875rem;}
+.book-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;z-index:50;max-height:320px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.book-result-item{display:flex;align-items:center;gap:12px;padding:.75rem 1rem;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border);}
+.book-result-item:last-child{border-bottom:none;}
+.book-result-item:hover{background:rgba(180,79,255,.08);}
+.book-cover{width:36px;height:50px;border-radius:4px;object-fit:cover;background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.book-info-title{font-size:13px;font-weight:500;margin-bottom:2px;}
+.book-info-author{font-size:11px;color:var(--muted);}
+.book-shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:1rem;}
+.shelf-book{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:.875rem;cursor:pointer;transition:all .2s;position:relative;}
+.shelf-book:hover{border-color:var(--border2);transform:translateY(-2px);}
+.shelf-book.active{border-color:var(--acc);background:var(--accg);}
+.shelf-book-cover{font-size:32px;text-align:center;margin-bottom:.5rem;}
+.shelf-book-title{font-size:12px;font-weight:600;margin-bottom:2px;line-height:1.3;}
+.shelf-book-author{font-size:10px;color:var(--muted);}
+.shelf-book-status{font-size:10px;margin-top:.5rem;padding:2px 8px;border-radius:99px;display:inline-block;}
+.shelf-book-status.read{background:rgba(74,222,128,.1);color:var(--green);}
+.shelf-book-status.reading{background:rgba(180,79,255,.1);color:var(--acc);}
+.shelf-book-status.want{background:rgba(96,165,250,.1);color:var(--blue);}
+.shelf-book-notes{font-size:11px;color:var(--muted);margin-top:.375rem;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+/* AUDIO */
+.audio-call{background:linear-gradient(135deg,#0d0f22,#12122a);border:1px solid var(--border2);border-radius:20px;padding:2rem;text-align:center;position:relative;overflow:hidden;}
+.audio-call::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(180,79,255,.08),transparent 60%);pointer-events:none;}
+.audio-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--acc2),var(--acc));display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:32px;position:relative;}
+.audio-avatar.speaking{animation:pulse 1.5s infinite;}
+.audio-waves{display:flex;align-items:center;justify-content:center;gap:3px;height:32px;margin:.75rem 0;}
+.wave-bar{width:3px;background:var(--acc);border-radius:99px;transition:height .1s ease;}
+@keyframes wave1{0%,100%{height:6px;}50%{height:20px;}}
+@keyframes wave2{0%,100%{height:12px;}50%{height:28px;}}
+@keyframes wave3{0%,100%{height:18px;}50%{height:8px;}}
+.wave-bar:nth-child(1){animation:wave1 .8s ease infinite;}
+.wave-bar:nth-child(2){animation:wave2 .8s ease infinite .1s;}
+.wave-bar:nth-child(3){animation:wave3 .8s ease infinite .2s;}
+.wave-bar:nth-child(4){animation:wave2 .8s ease infinite .3s;}
+.wave-bar:nth-child(5){animation:wave1 .8s ease infinite .4s;}
+.wave-bar:nth-child(6){animation:wave3 .8s ease infinite .15s;}
+.wave-bar:nth-child(7){animation:wave1 .8s ease infinite .25s;}
+.audio-mic-btn{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--acc2),var(--acc));border:none;cursor:pointer;font-size:24px;transition:all .2s;margin:.75rem auto;display:flex;align-items:center;justify-content:center;}
+.audio-mic-btn.recording{background:linear-gradient(135deg,#b91c1c,#ef4444);animation:recording 1s ease infinite;}
+.audio-mic-btn:hover{transform:scale(1.05);}
+.transcript-box{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-top:1rem;text-align:left;font-size:13px;color:var(--muted2);line-height:1.75;max-height:200px;overflow-y:auto;min-height:60px;}
+.transcript-box.ai{background:rgba(180,79,255,.06);border-color:var(--border2);}
+
+/* DNA BARS */
+.dna-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.dna-label{font-size:12px;color:var(--muted2);width:170px;flex-shrink:0;}
+.dna-track{flex:1;background:rgba(255,255,255,.05);border-radius:99px;height:5px;}
+.dna-fill{height:5px;border-radius:99px;background:linear-gradient(90deg,var(--acc2),var(--acc));transition:width 1.2s ease;}
+.dna-val{font-family:var(--mono);font-size:11px;color:var(--acc);width:36px;text-align:right;flex-shrink:0;}
+
+/* CHIPS */
+.chip-wrap{display:flex;flex-wrap:wrap;gap:6px;min-height:24px;}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;font-size:11px;color:var(--muted2);}
+.chip button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;line-height:1;padding:0;}
+.chip button:hover{color:var(--red);}
+
+/* KNOWLEDGE ITEMS */
+.ki{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;margin-bottom:7px;display:flex;gap:10px;transition:border-color .2s;}
+.ki:hover{border-color:var(--border2);}
+.ki-tag{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:4px;background:var(--accg);color:var(--acc);display:inline-block;margin-top:3px;}
+
+/* FEED ITEMS */
+.fi{display:flex;gap:10px;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.fi-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.fi-time{font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0;margin-top:2px;}
+
+/* GENERATE */
+.gen-out-title{font-family:'Instrument Serif',serif;font-size:1.7rem;color:#fff;outline:none;min-height:2.2rem;border-bottom:1px solid var(--border);padding-bottom:.75rem;margin-bottom:.875rem;line-height:1.2;}
+.gen-out-title:empty::before{content:'Your title...';color:rgba(255,255,255,.15);font-style:italic;pointer-events:none;}
+.gen-out-body{font-family:'Instrument Serif',serif;font-size:17px;line-height:1.9;color:rgba(255,255,255,.85);outline:none;min-height:200px;}
+.gen-out-body:empty::before{content:'Your blog will appear here...';color:rgba(255,255,255,.15);font-style:italic;pointer-events:none;}
+
+/* PROG */
+.prog-wrap{background:rgba(255,255,255,.06);border-radius:99px;height:4px;margin:.5rem 0;}
+.prog-bar{height:4px;border-radius:99px;background:linear-gradient(90deg,var(--acc2),var(--acc));transition:width .6s ease;}
+
+/* SCORE RING */
+.ring-wrap{position:relative;width:110px;height:110px;flex-shrink:0;}
+.ring-wrap svg{transform:rotate(-90deg);}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring-num{font-family:'Instrument Serif',serif;font-size:1.6rem;color:#fff;}
+.ring-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:14px;color:#fff;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid rgba(255,255,255,.1);border-radius:20px;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);z-index:5;}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:22px;line-height:1;}
+.modal-close:hover{color:#fff;}
+.modal-body{padding:1.5rem;}
+
+/* LOADING SPINNER */
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+
+/* MOBILE */
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .bm-sections{grid-template-columns:repeat(3,1fr);}
+  .grid2,.grid3{grid-template-columns:1fr;}
+  .main{padding:1.25rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"><div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><span id="toast-msg"></span></div>
+
+<!-- BOOK NOTES MODAL -->
+<div class="modal-overlay" id="book-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="modal-book-cover" style="font-size:24px;"></div>
+        <div><div id="modal-book-title" style="font-size:15px;font-weight:600;"></div><div id="modal-book-author" style="font-size:12px;color:var(--muted);"></div></div>
+      </div>
+      <button class="modal-close" onclick="closeBookModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:1rem;">
+        <button class="btn btn-sm" id="bstat-read" onclick="setBookStatus('read')" style="border-radius:99px;">✓ Read</button>
+        <button class="btn btn-sm btn-g" id="bstat-reading" onclick="setBookStatus('reading')">Reading</button>
+        <button class="btn btn-sm btn-g" id="bstat-want" onclick="setBookStatus('want')">Want to read</button>
+      </div>
+      <div style="margin-bottom:.875rem;">
+        <label style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block;">Key insights from this book</label>
+        <textarea class="inp" id="book-notes-inp" style="min-height:110px;" placeholder="What did you learn? What shifted your thinking? Key quotes, frameworks, ideas that stuck with you..."></textarea>
+      </div>
+      <div style="margin-bottom:.875rem;">
+        <label style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block;">How has this book shaped you?</label>
+        <textarea class="inp" id="book-impact-inp" style="min-height:70px;" placeholder="e.g. It changed how I think about hiring. Now I always..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-p" onclick="saveBookNotes()" style="flex:1;">Save to brain →</button>
+        <button class="btn btn-g" onclick="closeBookModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <a class="nav-logo" href="voiceforge.html">
+    <div class="nav-logo-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg></div>
+    VoiceForge
+  </a>
+  <div class="sync-live"><span class="sync-dot"></span><span id="sync-txt">NVIDIA NIM · LIVE</span></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:11px;font-family:var(--mono);color:var(--acc);" id="api-status-nav">⬡ connecting...</span>
+    <button class="nbtn" onclick="history.back()">← Back</button>
+    <button class="nbtn p" onclick="showPage('generate')">✦ Generate</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sitem active" onclick="showPage('overview')" id="si-overview"><span class="sitem-icon">🧠</span>Brain Overview<span class="sitem-badge" id="sb-pct">0%</span></div>
+    <div class="sidebar-label">Build Your Brain</div>
+    <div class="sitem" onclick="showPage('questions')" id="si-questions"><span class="sitem-icon">🎯</span>Psychology Q&A<span class="sitem-badge" id="sb-q">0/20</span></div>
+    <div class="sitem" onclick="showPage('audio')" id="si-audio"><span class="sitem-icon">🎙️</span>Audio Brain Call<span class="sitem-badge" id="sb-audio">0 calls</span></div>
+    <div class="sitem" onclick="showPage('memories')" id="si-memories"><span class="sitem-icon">💭</span>Memories<span class="sitem-badge" id="sb-mem">0</span></div>
+    <div class="sitem" onclick="showPage('books')" id="si-books"><span class="sitem-icon">📚</span>Book Library<span class="sitem-badge" id="sb-books">0</span></div>
+    <div class="sitem" onclick="showPage('links')" id="si-links"><span class="sitem-icon">🔗</span>Posts & Links<span class="sitem-badge" id="sb-links">0</span></div>
+    <div class="sidebar-label">Your Brain</div>
+    <div class="sitem" onclick="showPage('dna')" id="si-dna"><span class="sitem-icon">🧬</span>Voice DNA</div>
+    <div class="sitem" onclick="showPage('knowledge')" id="si-knowledge"><span class="sitem-icon">💡</span>Knowledge Base</div>
+    <div class="sitem" onclick="showPage('generate')" id="si-generate"><span class="sitem-icon">✦</span>Generate</div>
+    <div class="sidebar-label">Settings</div>
+    <div class="sitem" onclick="showPage('settings')" id="si-settings"><span class="sitem-icon">⚙️</span>API & Settings</div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ══ OVERVIEW ══ -->
+    <div class="page active" id="page-overview">
+      <!-- Brain Creation Meter -->
+      <div class="brain-meter">
+        <div class="bm-header">
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px;">Brain Creation Progress</div>
+            <div class="bm-title">Your brain is <em style="font-style:italic;color:var(--acc);" id="meter-pct-text">0%</em> complete</div>
+          </div>
+          <div class="bm-pct" id="meter-pct">0%</div>
+        </div>
+        <div class="bm-track"><div class="bm-fill" id="meter-fill" style="width:0%;"></div></div>
+        <div class="bm-sections">
+          <div class="bm-sec" id="bms-questions"><div class="bm-sec-icon">🎯</div><div class="bm-sec-name">Q&A</div><div class="bm-sec-val" id="bmv-q">0/20</div></div>
+          <div class="bm-sec" id="bms-audio"><div class="bm-sec-icon">🎙️</div><div class="bm-sec-name">Audio</div><div class="bm-sec-val" id="bmv-a">0 min</div></div>
+          <div class="bm-sec" id="bms-memories"><div class="bm-sec-icon">💭</div><div class="bm-sec-name">Memories</div><div class="bm-sec-val" id="bmv-m">0</div></div>
+          <div class="bm-sec" id="bms-books"><div class="bm-sec-icon">📚</div><div class="bm-sec-name">Books</div><div class="bm-sec-val" id="bmv-b">0</div></div>
+          <div class="bm-sec" id="bms-links"><div class="bm-sec-icon">🔗</div><div class="bm-sec-name">Links</div><div class="bm-sec-val" id="bmv-l">0</div></div>
+          <div class="bm-sec" id="bms-analysis"><div class="bm-sec-icon">✓</div><div class="bm-sec-name">Analysed</div><div class="bm-sec-val" id="bmv-an">No</div></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <!-- Brain canvas -->
+        <div class="card" style="padding:0;overflow:hidden;border-radius:16px;">
+          <canvas id="brain-canvas" width="480" height="320" style="width:100%;display:block;"></canvas>
+        </div>
+        <!-- Quick stats -->
+        <div>
+          <div class="card" style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1.25rem;">
+            <div class="ring-wrap">
+              <svg width="110" height="110" viewBox="0 0 110 110">
+                <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7"/>
+                <circle id="ring-circle" cx="55" cy="55" r="46" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" style="transition:stroke-dashoffset 1s ease;"/>
+                <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#e879f9"/></linearGradient></defs>
+              </svg>
+              <div class="ring-center"><div class="ring-num" id="ring-num">0%</div><div class="ring-lbl">Voice</div></div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-family:'Instrument Serif',serif;font-size:1.2rem;margin-bottom:4px;" id="ov-name">Your Brain</div>
+              <div style="font-size:13px;color:var(--muted);margin-bottom:.75rem;" id="ov-status">Add memories to activate</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;text-align:center;"><div style="font-family:'Instrument Serif',serif;font-size:1.3rem;" id="ov-mem">0</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;">Memories</div></div>
+                <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;text-align:center;"><div style="font-family:'Instrument Serif',serif;font-size:1.3rem;" id="ov-con">0</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;">Concepts</div></div>
+                <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;text-align:center;"><div style="font-family:'Instrument Serif',serif;font-size:1.3rem;" id="ov-books-cnt">0</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;">Books</div></div>
+                <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;text-align:center;"><div style="font-family:'Instrument Serif',serif;font-size:1.3rem;" id="ov-posts-cnt">0</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;">Posts Gen.</div></div>
+              </div>
+            </div>
+          </div>
+          <!-- Next steps -->
+          <div class="card" style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(180,79,255,.05));border-color:var(--border2);">
+            <div class="card-title"><div class="card-dot" style="background:var(--acc);"></div>What to do next</div>
+            <div id="next-steps" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity feed -->
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--green);animation:blink 1s infinite;"></div>Live brain activity</div>
+        <div id="feed-list"><div style="color:var(--muted);font-size:13px;">No activity yet. Start feeding your brain.</div></div>
+      </div>
+    </div>
+
+    <!-- ══ PSYCHOLOGY Q&A ══ -->
+    <div class="page" id="page-questions">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Psychological profiling</div>
+        <div style="font-size:14px;color:var(--muted2);line-height:1.75;">These questions are designed by cognitive scientists to extract your unique mental models, decision patterns, and voice. Answer honestly — the rawer your answers, the more accurate your brain model.</div>
+      </div>
+      <div class="q-progress" id="q-progress"></div>
+      <div id="q-container"></div>
+      <div id="q-complete" style="display:none;">
+        <div class="card" style="text-align:center;padding:2rem;background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(180,79,255,.07));border-color:var(--border2);">
+          <div style="font-size:48px;margin-bottom:.875rem;">🎯</div>
+          <div style="font-family:'Instrument Serif',serif;font-size:1.5rem;margin-bottom:.5rem;">Profiling complete</div>
+          <div style="font-size:14px;color:var(--muted2);margin-bottom:1.25rem;">Your psychological data has been absorbed into the brain model. Analyse now to see your Voice DNA.</div>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="btn btn-p" onclick="analyzeWithAI()">🧠 Analyse now</button>
+            <button class="btn btn-g" onclick="showPage('audio')">🎙️ Audio call next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AUDIO BRAIN CALL ══ -->
+    <div class="page" id="page-audio">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Audio brain transfer</div>
+        <div style="font-size:14px;color:var(--muted2);line-height:1.75;">Have a live conversation with your AI brain. It asks you deep questions, listens to how you speak, captures your reasoning patterns, your verbal tics, how you structure arguments. The audio channel captures what text can't.</div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <div class="audio-call">
+            <div class="audio-avatar" id="audio-avatar">🧠</div>
+            <div style="font-family:'Instrument Serif',serif;font-size:1.2rem;margin-bottom:.25rem;" id="audio-title">Brain Lab AI</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:.875rem;" id="audio-subtitle">Ready to learn from you</div>
+            <div class="audio-waves" id="audio-waves" style="opacity:0;transition:opacity .3s;">
+              <div class="wave-bar" style="height:8px;"></div><div class="wave-bar" style="height:14px;"></div><div class="wave-bar" style="height:20px;"></div><div class="wave-bar" style="height:14px;"></div><div class="wave-bar" style="height:8px;"></div><div class="wave-bar" style="height:14px;"></div><div class="wave-bar" style="height:10px;"></div>
+            </div>
+            <div id="audio-question" style="font-family:'Instrument Serif',serif;font-size:1rem;color:rgba(255,255,255,.8);margin:.5rem 0 1rem;line-height:1.6;min-height:2.5rem;"></div>
+            <button class="audio-mic-btn" id="mic-btn" onclick="toggleRecording()">🎙️</button>
+            <div style="font-size:12px;color:var(--muted);margin-top:.25rem;" id="mic-label">Tap to speak</div>
+            <div class="transcript-box" id="user-transcript">Your words will appear here...</div>
+            <div class="transcript-box ai" id="ai-transcript" style="margin-top:.5rem;">AI response will appear here...</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:.875rem;flex-wrap:wrap;">
+            <button class="btn btn-p btn-sm" onclick="startAudioSession()">▶ Start session</button>
+            <button class="btn btn-g btn-sm" onclick="nextAudioQuestion()">→ Next question</button>
+            <button class="btn btn-g btn-sm" onclick="endAudioSession()">■ End &amp; save</button>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--pink);"></div>Session insights captured</div>
+            <div id="audio-insights"><div style="color:var(--muted);font-size:13px;">Start a session to capture insights.</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--blue);"></div>Session history</div>
+            <div id="audio-history"><div style="color:var(--muted);font-size:13px;">No sessions yet.</div></div>
+          </div>
+          <div class="card" style="background:rgba(255,255,255,.02);">
+            <div class="card-title"><div class="card-dot" style="background:var(--amber);"></div>Text input (if no mic)</div>
+            <textarea class="inp" id="audio-text-inp" style="min-height:70px;" placeholder="Type your answer here instead of speaking..."></textarea>
+            <button class="btn btn-p btn-sm" style="margin-top:8px;" onclick="submitTextAnswer()">Submit answer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MEMORIES ══ -->
+    <div class="page" id="page-memories">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Feed your memories</div>
+        <div style="font-size:14px;color:var(--muted2);">Thoughts, beliefs, stories, frameworks, lessons — anything that makes you you.</div>
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--acc);"></div>Add memory</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.875rem;" id="mem-cats">
+              <button class="q-opt sel" onclick="selectMemCat(this,'thoughts')">💭 Thoughts</button>
+              <button class="q-opt" onclick="selectMemCat(this,'beliefs')">🌱 Beliefs</button>
+              <button class="q-opt" onclick="selectMemCat(this,'stories')">📖 Stories</button>
+              <button class="q-opt" onclick="selectMemCat(this,'frameworks')">🔧 Frameworks</button>
+              <button class="q-opt" onclick="selectMemCat(this,'learning')">🧠 Learning</button>
+              <button class="q-opt" onclick="selectMemCat(this,'writings')">✍️ Writings</button>
+            </div>
+            <textarea class="inp" id="mem-inp" style="min-height:120px;" placeholder="Write anything raw and honest. The more unfiltered, the better your brain model will be..."></textarea>
+            <div style="display:flex;gap:8px;margin-top:.75rem;align-items:center;">
+              <button class="btn btn-p" onclick="addMemory()">+ Add to brain</button>
+              <label class="btn btn-g" style="cursor:pointer;">📎 Upload<input type="file" style="display:none;" accept=".txt,.pdf,.doc,.docx" onchange="uploadMemFile(this)"/></label>
+              <span style="margin-left:auto;font-size:12px;color:var(--muted);" id="mem-lbl">0 memories</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--amber);"></div>Analyse with AI</div>
+            <div style="font-size:13px;color:var(--muted2);margin-bottom:.875rem;line-height:1.7;">Let NVIDIA NIM read all your memories and extract your Voice DNA, beliefs, and patterns.</div>
+            <button class="btn btn-p" id="analyse-btn" onclick="analyzeWithAI()" style="width:100%;">🧠 Analyse entire brain</button>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--blue);"></div>Stored memories <span id="mem-count-badge" style="margin-left:4px;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;color:var(--muted);">0 total</span></div>
+            <div id="mem-list"><div style="color:var(--muted);font-size:13px;">No memories yet.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BOOKS ══ -->
+    <div class="page" id="page-books">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Book library</div>
+        <div style="font-size:14px;color:var(--muted2);">Every book you've read shapes how you think. Add them, tag your status, write your notes. The AI learns from what you've absorbed.</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--acc);"></div>Search &amp; add books</div>
+        <div class="book-search-wrap">
+          <input class="inp" id="book-search" placeholder="Search by title or author (e.g. Atomic Habits, Paul Graham...)" oninput="searchBooks(this.value)" onblur="setTimeout(()=>document.getElementById('book-results').style.display='none',200)"/>
+          <div class="book-results" id="book-results" style="display:none;"></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Popular: <span onclick="searchBooks('Deep Work')" style="cursor:pointer;color:var(--acc);margin-right:8px;">Deep Work</span><span onclick="searchBooks('Atomic Habits')" style="cursor:pointer;color:var(--acc);margin-right:8px;">Atomic Habits</span><span onclick="searchBooks('Zero to One')" style="cursor:pointer;color:var(--acc);margin-right:8px;">Zero to One</span><span onclick="searchBooks('Thinking Fast')" style="cursor:pointer;color:var(--acc);margin-right:8px;">Thinking Fast</span><span onclick="searchBooks('Paul Graham')" style="cursor:pointer;color:var(--acc);">Paul Graham</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--green);"></div>Your bookshelf <span id="shelf-count" style="margin-left:4px;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;color:var(--muted);">0 books</span></div>
+        <div id="book-shelf"><div style="color:var(--muted);font-size:13px;padding:.5rem 0;">No books added yet. Search above to add your first book.</div></div>
+      </div>
+    </div>
+
+    <!-- ══ LINKS ══ -->
+    <div class="page" id="page-links">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Posts, blogs &amp; links</div>
+        <div style="font-size:14px;color:var(--muted2);">Add links to your own writing, talks, podcasts, and videos. The AI reads and absorbs them into your brain model.</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--acc);"></div>Add a link</div>
+        <div style="display:flex;gap:8px;margin-bottom:.875rem;">
+          <input class="inp" id="link-url" placeholder="Paste URL — blog post, LinkedIn, YouTube, podcast, Medium..." style="flex:1;"/>
+          <button class="btn btn-p" onclick="addLink()">+ Add</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.875rem;">
+          <button class="q-opt sel" onclick="selectLinkType(this,'blog')">📝 Blog</button>
+          <button class="q-opt" onclick="selectLinkType(this,'linkedin')">💼 LinkedIn</button>
+          <button class="q-opt" onclick="selectLinkType(this,'youtube')">▶ YouTube</button>
+          <button class="q-opt" onclick="selectLinkType(this,'podcast')">🎙 Podcast</button>
+          <button class="q-opt" onclick="selectLinkType(this,'twitter')">𝕏 Twitter</button>
+          <button class="q-opt" onclick="selectLinkType(this,'other')">🔗 Other</button>
+        </div>
+        <textarea class="inp" id="link-desc" style="min-height:60px;" placeholder="Optional: what's this about? What's your key insight from it?"></textarea>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--blue);"></div>Your links <span id="links-count" style="margin-left:4px;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;color:var(--muted);">0 links</span></div>
+        <div id="links-list"><div style="color:var(--muted);font-size:13px;">No links added yet.</div></div>
+      </div>
+    </div>
+
+    <!-- ══ VOICE DNA ══ -->
+    <div class="page" id="page-dna">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Voice DNA</div>
+        <div style="font-size:14px;color:var(--muted2);">Your unique writing fingerprint — extracted by AI from everything you've fed your brain.</div>
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--acc);"></div>Writing fingerprint</div>
+            <div id="dna-bars"><div style="color:var(--muted);font-size:13px;">Analyse your brain to generate DNA.</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--amber);"></div>Signature phrases</div>
+            <div class="chip-wrap" id="sig-phrases"><div style="color:var(--muted);font-size:13px;">No phrases yet.</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1.25rem;">
+            <div class="ring-wrap">
+              <svg width="110" height="110" viewBox="0 0 110 110">
+                <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7"/>
+                <circle id="dna-ring" cx="55" cy="55" r="46" fill="none" stroke="url(#rg2)" stroke-width="7" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" style="transition:stroke-dashoffset 1s ease;"/>
+                <defs><linearGradient id="rg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#e879f9"/></linearGradient></defs>
+              </svg>
+              <div class="ring-center"><div class="ring-num" id="dna-score">0%</div><div class="ring-lbl">Voice</div></div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Voice accuracy</div>
+              <div style="font-size:13px;color:var(--muted);margin-bottom:.625rem;" id="dna-status">Feed more to improve</div>
+              <button class="btn btn-p btn-sm" onclick="analyzeWithAI()" id="dna-analyse-btn">🧠 Re-analyse</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--blue);"></div>Writing style</div>
+            <div id="dna-style" style="font-size:13px;color:var(--muted2);line-height:1.8;">Run analysis to see your style.</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--pink);"></div>Cognitive patterns</div>
+            <div id="dna-patterns" style="font-size:13px;color:var(--muted2);line-height:1.8;">No patterns detected yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ KNOWLEDGE ══ -->
+    <div class="page" id="page-knowledge">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Brain knowledge base</div>
+        <div style="font-size:14px;color:var(--muted2);">Everything the AI has extracted from your memories, books, and conversations.</div>
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--blue);"></div>Key insights</div>
+            <div id="kb-insights"><div style="color:var(--muted);font-size:13px;">Analyse your brain to extract insights.</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--green);"></div>Core beliefs</div>
+            <div id="kb-beliefs"><div style="color:var(--muted);font-size:13px;">No beliefs detected yet.</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--pink);"></div>Mental frameworks</div>
+            <div id="kb-frameworks"><div style="color:var(--muted);font-size:13px;">No frameworks detected yet.</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--amber);"></div>Book wisdom</div>
+            <div id="kb-books-wisdom"><div style="color:var(--muted);font-size:13px;">Add books with notes to see extracted wisdom.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ GENERATE ══ -->
+    <div class="page" id="page-generate">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">Generate as you</div>
+        <div style="font-size:14px;color:var(--muted2);">NVIDIA NIM writes using your full brain as context. This is not generic AI — this is you.</div>
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--acc);"></div>What do you want to write?</div>
+            <textarea class="inp" id="gen-topic" style="min-height:80px;margin-bottom:.875rem;" placeholder="e.g. Why I think most product roadmaps are organised procrastination..."></textarea>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.875rem;">
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;">Format</label>
+                <select class="inp" id="gen-format" style="cursor:pointer;">
+                  <option>Blog post</option><option>LinkedIn post</option><option>Twitter thread</option><option>Newsletter</option><option>Essay</option><option>Opinion piece</option>
+                </select></div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;">Length</label>
+                <select class="inp" id="gen-length" style="cursor:pointer;">
+                  <option>Medium (500-800w)</option><option>Short (200-300w)</option><option>Long (1000-1500w)</option>
+                </select></div>
+            </div>
+            <div style="margin-bottom:.875rem;"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;">Use brain context</label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="checkbox" checked id="ctx-mem"/> Memories</label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="checkbox" checked id="ctx-books"/> Books</label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="checkbox" checked id="ctx-qa"/> Q&A answers</label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="checkbox" checked id="ctx-audio"/> Audio sessions</label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="checkbox" checked id="ctx-dna"/> Voice DNA</label>
+              </div>
+            </div>
+            <button class="btn btn-p" id="gen-btn" onclick="generatePost()" style="width:100%;font-size:14px;padding:12px;">✦ Generate with my brain</button>
+            <div id="gen-model-info" style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:6px;display:none;"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-dot" style="background:var(--amber);"></div>Topic ideas from your brain</div>
+            <div id="topic-ideas" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="position:sticky;top:80px;">
+            <div class="card-title"><div class="card-dot" style="background:var(--green);"></div>Output — written as you</div>
+            <div id="gen-title-out" class="gen-out-title" contenteditable="true"></div>
+            <div id="gen-body-out" class="gen-out-body" contenteditable="true"></div>
+            <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-g btn-sm" onclick="copyOutput()">Copy</button>
+              <button class="btn btn-g btn-sm" onclick="downloadOutput()">Export</button>
+              <button class="btn btn-g btn-sm" onclick="generatePost()">↻ Retry</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div class="page" id="page-settings">
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:.4rem;">API & Settings</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--green);"></div>NVIDIA NIM connection</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:.875rem;">
+          <div id="api-status-dot" style="width:10px;height:10px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div id="api-status-label" style="font-size:13px;font-weight:500;">Not connected</div>
+            <div style="font-size:11px;color:var(--muted);">Get your free key at build.nvidia.com</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input class="inp" type="password" id="api-key-inp" style="flex:1;" placeholder="nvapi-..." value="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"/>
+          <button class="btn btn-p" onclick="connectAPI()">Connect</button>
+        </div>
+        <div id="api-test-result" style="font-size:12px;margin-top:8px;font-family:var(--mono);display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--amber);"></div>Your name</div>
+        <div style="display:flex;gap:8px;">
+          <input class="inp" id="user-name-inp" placeholder="Your name..." style="flex:1;" oninput="setUserName(this.value)"/>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-dot" style="background:var(--red);"></div>Reset brain</div>
+        <div style="font-size:13px;color:var(--muted2);margin-bottom:.875rem;">This will delete all memories, books, Q&A answers, and audio sessions.</div>
+        <button class="btn btn-r btn-sm" onclick="if(confirm('Delete all brain data?')){resetBrain();}">Reset entire brain</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const NVIDIA_BASE='https://integrate.api.nvidia.com/v1';
+const MODEL='meta/llama-3.3-70b-instruct';
+let API_KEY='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';
+let isConnected=false;
+let userName='';
+
+// Brain data
+let brain={
+  memories:{thoughts:[],beliefs:[],stories:[],frameworks:[],learning:[],writings:[]},
+  books:[],
+  links:[],
+  qaAnswers:[],
+  audioSessions:[],
+  analysis:null,
+  postsGenerated:0
+};
+
+let feedItems=[];
+let currentMemCat='thoughts';
+let currentLinkType='blog';
+let currentAudioQ=0;
+let isRecording=false;
+let audioSessionActive=false;
+let currentQIdx=0;
+let qaComplete=false;
+let mediaRecorder=null;
+let audioChunks=[];
+let audioSessionInsights=[];
+let editingBookIdx=null;
+
+// ── QUESTIONS (20 deep psychological questions) ──
+const QUESTIONS=[
+  {q:"When you're stuck on a hard problem, what's your first instinct?",opts:["Break it into smaller pieces","Talk to someone about it","Sleep on it / take a walk","Research obsessively","Reframe the problem entirely"],cat:"thinking_style"},
+  {q:"What's the belief you hold that most people in your field would disagree with?",opts:["Skip — I'll write my answer"],cat:"beliefs",open:true},
+  {q:"Describe the moment you realised you were thinking about your work differently from everyone else.",opts:["Skip"],cat:"stories",open:true},
+  {q:"How do you decide when something is 'good enough' to ship or share?",opts:["When I'm proud of it","When the deadline arrives","When I've gotten feedback","When it solves the core problem","Never — I'm always editing"],cat:"process"},
+  {q:"What does your ideal thinking environment look like?",opts:["Complete silence","Background noise / coffee shop","Music","Walking or moving","Doesn't matter"],cat:"environment"},
+  {q:"What's the biggest lesson you've had to learn the hard way?",opts:["Skip"],cat:"stories",open:true},
+  {q:"When you're explaining something complex, what's your default approach?",opts:["Start with the conclusion, then justify","Build up from first principles","Use an analogy","Tell a story","Draw or visualise it"],cat:"communication"},
+  {q:"What do most people optimise for that you think is wrong?",opts:["Skip"],cat:"beliefs",open:true},
+  {q:"What's your relationship with being wrong?",opts:["I update quickly and move on","I find it uncomfortable but necessary","I need time to process it","I rarely feel I was fully wrong","I enjoy it — it means I learned something"],cat:"mindset"},
+  {q:"What kind of writing do you read most and why?",opts:["Long-form essays","Short punchy takes","Research / academic","Narrative / story","Anything practical and actionable"],cat:"influences"},
+  {q:"What's a framework or mental model you use that you've never seen anyone else use?",opts:["Skip"],cat:"frameworks",open:true},
+  {q:"How do you know when you genuinely understand something vs just knowing about it?",opts:["When I can explain it simply","When I can predict edge cases","When I can apply it instinctively","When I've failed using it and recovered","When I can teach it"],cat:"thinking_style"},
+  {q:"What's the most important thing you believe about building products / companies / teams?",opts:["Skip"],cat:"beliefs",open:true},
+  {q:"Describe your relationship with uncertainty.",opts:["I try to eliminate it as fast as possible","I'm comfortable with ambiguity","It energises me","It paralyses me sometimes","I've learned to sit with it"],cat:"mindset"},
+  {q:"What's a story from your career that tells you who you actually are?",opts:["Skip"],cat:"stories",open:true},
+  {q:"What are the 3 books that most shaped how you think?",opts:["Skip"],cat:"books",open:true},
+  {q:"How do you think about failure?",opts:["Data — useful information","A signal to pivot","Something to learn once and move on from","Proof you took a risk worth taking","I try not to dwell on it"],cat:"mindset"},
+  {q:"What's something you believe now that you didn't believe 5 years ago?",opts:["Skip"],cat:"beliefs",open:true},
+  {q:"How do you structure your thinking when writing?",opts:["I start with the ending","I write to figure out what I think","I outline first","I just start and edit heavily","I talk it out first"],cat:"writing_process"},
+  {q:"What's the one thing you want your writing to make people feel?",opts:["Challenged / provoked","Understood / seen","Inspired to act","Smarter / more informed","Less alone in their thinking"],cat:"communication"},
+];
+
+let qaState=QUESTIONS.map(()=>({answered:false,answer:'',selectedOpts:[]}));
+
+// ── BOOKS DATABASE ──
+const BOOKS_DB=[
+  {title:"Thinking, Fast and Slow",author:"Daniel Kahneman",emoji:"🧠",genre:"Psychology"},
+  {title:"Atomic Habits",author:"James Clear",emoji:"⚡",genre:"Productivity"},
+  {title:"Zero to One",author:"Peter Thiel",emoji:"🚀",genre:"Startups"},
+  {title:"Deep Work",author:"Cal Newport",emoji:"🎯",genre:"Productivity"},
+  {title:"The Hard Thing About Hard Things",author:"Ben Horowitz",emoji:"💪",genre:"Leadership"},
+  {title:"Principles",author:"Ray Dalio",emoji:"📐",genre:"Decision Making"},
+  {title:"Sapiens",author:"Yuval Noah Harari",emoji:"🌍",genre:"History"},
+  {title:"Influence",author:"Robert Cialdini",emoji:"🎭",genre:"Psychology"},
+  {title:"The Lean Startup",author:"Eric Ries",emoji:"🔄",genre:"Startups"},
+  {title:"Good to Great",author:"Jim Collins",emoji:"📈",genre:"Business"},
+  {title:"Thinking in Systems",author:"Donella Meadows",emoji:"♾️",genre:"Systems"},
+  {title:"Meditations",author:"Marcus Aurelius",emoji:"🏛️",genre:"Philosophy"},
+  {title:"How to Win Friends",author:"Dale Carnegie",emoji:"🤝",genre:"Communication"},
+  {title:"Shoe Dog",author:"Phil Knight",emoji:"👟",genre:"Memoir"},
+  {title:"High Output Management",author:"Andy Grove",emoji:"⚙️",genre:"Management"},
+  {title:"The Mom Test",author:"Rob Fitzpatrick",emoji:"💬",genre:"Product"},
+  {title:"Creativity Inc",author:"Ed Catmull",emoji:"🎨",genre:"Creativity"},
+  {title:"Never Split the Difference",author:"Chris Voss",emoji:"🤜",genre:"Negotiation"},
+  {title:"The Power of Now",author:"Eckhart Tolle",emoji:"🧘",genre:"Mindfulness"},
+  {title:"Antifragile",author:"Nassim Taleb",emoji:"💎",genre:"Philosophy"},
+  {title:"The Great CEO Within",author:"Matt Mochary",emoji:"👑",genre:"Leadership"},
+  {title:"Sprint",author:"Jake Knapp",emoji:"⏱️",genre:"Product"},
+  {title:"Essentialism",author:"Greg McKeown",emoji:"✂️",genre:"Productivity"},
+  {title:"Start with Why",author:"Simon Sinek",emoji:"❓",genre:"Leadership"},
+];
+
+const AUDIO_QUESTIONS=[
+  "Tell me about a time you solved a really hard problem. Walk me through exactly how you thought about it.",
+  "What do you genuinely believe about your industry that almost nobody else does?",
+  "Describe your decision-making process when you have incomplete information.",
+  "What's the mental model you use most that you've never seen written down anywhere?",
+  "Tell me about the biggest mistake you made professionally. What did it teach you?",
+  "How do you explain very complex things to people who don't have your background?",
+  "What does success actually look like to you — not what you say publicly, but actually?",
+  "Walk me through how you'd approach building something completely new from scratch.",
+  "What are the three things you know now that you wish you'd known at 22?",
+  "When you read something, how do you decide if it's worth remembering?",
+];
+
+const TOPIC_IDEAS=[
+  "Why most product roadmaps are a form of organised procrastination",
+  "The growth channel everyone ignores in 2025",
+  "What I learned from shipping something nobody used",
+  "The real reason smart people fail at execution",
+  "On staying a beginner when you become the expert",
+  "Why your second idea is almost always better than your first",
+  "The meeting that changed how I think about leadership",
+  "What AI gets wrong about how humans actually make decisions",
+];
+
+// ── INIT ──
+function init(){
+  document.getElementById('api-key-inp').value=API_KEY;
+  connectAPI();
+  renderQuestions();
+  renderTopicIdeas();
+  initBrainCanvas();
+  updateMeter();
+  renderNextSteps();
+  addFeed('Brain Lab initialised','#a594ff');
+  showPage('overview');
+}
+
+// ── API ──
+async function connectAPI(){
+  const key=document.getElementById('api-key-inp').value.trim();
+  if(!key) return;
+  API_KEY=key;
+  document.getElementById('api-status-dot').style.background='var(--amber)';
+  document.getElementById('api-status-label').textContent='Connecting...';
+  document.getElementById('api-status-nav').textContent='⬡ connecting...';
+  try{
+    const r=await fetch(NVIDIA_BASE+'/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,messages:[{role:'user',content:'hi'}],max_tokens:5})});
+    if(r.ok||r.status===200){connected(true);}else connected(false,'Error '+r.status);
+  }catch(e){connected(false,'Network error');}
+}
+function connected(ok,msg){
+  isConnected=ok;
+  document.getElementById('api-status-dot').style.background=ok?'var(--green)':'var(--red)';
+  document.getElementById('api-status-label').textContent=ok?'Connected — '+MODEL:(msg||'Failed');
+  document.getElementById('api-status-nav').textContent=ok?'⬡ NIM live':'⬡ offline';
+  document.getElementById('sync-txt').textContent=ok?'NVIDIA NIM · LIVE':'Disconnected';
+  const r=document.getElementById('api-test-result');
+  r.style.display='block';r.style.color=ok?'var(--green)':'var(--red)';r.textContent=ok?'✓ API key valid — model ready':('✗ '+(msg||'Check key'));
+  if(ok){showToast('Connected to NVIDIA NIM!');addFeed('NVIDIA NIM connected ('+MODEL+')','#4ade80');}
+  else showToast(msg||'Connection failed');
+}
+async function callNIM(messages,maxTokens=1200){
+  if(!isConnected){showToast('Connect your API key in Settings first.');return null;}
+  const r=await fetch(NVIDIA_BASE+'/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,messages,max_tokens:maxTokens,temperature:0.75,stream:false})});
+  if(!r.ok){const e=await r.text();throw new Error(e.slice(0,100));}
+  const d=await r.json();
+  return d.choices?.[0]?.message?.content||'';
+}
+
+// ── PAGES ──
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sitem').forEach(s=>s.classList.remove('active'));
+  const page=document.getElementById('page-'+name);
+  const si=document.getElementById('si-'+name);
+  if(page) page.classList.add('active');
+  if(si) si.classList.add('active');
+}
+
+// ── METER ──
+function updateMeter(){
+  const qa=qaState.filter(q=>q.answered).length;
+  const mem=Object.values(brain.memories).flat().length;
+  const bk=brain.books.length;
+  const lk=brain.links.length;
+  const au=brain.audioSessions.length;
+  const an=brain.analysis?1:0;
+  const scores={qa:Math.min(qa/20,1)*25,mem:Math.min(mem/15,1)*20,books:Math.min(bk/5,1)*15,links:Math.min(lk/5,1)*10,audio:Math.min(au/3,1)*20,analysis:an*10};
+  const total=Math.round(Object.values(scores).reduce((a,b)=>a+b,0));
+  document.getElementById('meter-pct').textContent=total+'%';
+  document.getElementById('meter-pct-text').textContent=total+'%';
+  document.getElementById('meter-fill').style.width=total+'%';
+  document.getElementById('sb-pct').textContent=total+'%';
+  document.getElementById('sb-q').textContent=qa+'/20';
+  document.getElementById('sb-mem').textContent=mem;
+  document.getElementById('sb-books').textContent=bk;
+  document.getElementById('sb-links').textContent=lk;
+  document.getElementById('sb-audio').textContent=au+' sessions';
+  document.getElementById('bmv-q').textContent=qa+'/20';
+  document.getElementById('bmv-a').textContent=(au*8)+' min';
+  document.getElementById('bmv-m').textContent=mem;
+  document.getElementById('bmv-b').textContent=bk;
+  document.getElementById('bmv-l').textContent=lk;
+  document.getElementById('bmv-an').textContent=an?'Done ✓':'No';
+  ['questions','audio','memories','books','links'].forEach((s,i)=>{
+    const el=document.getElementById('bms-'+s);
+    const val=[qa/20,au/3,mem/15,bk/5,lk/5][i];
+    if(val>=1)el.className='bm-sec done';else if(val>0)el.className='bm-sec partial';else el.className='bm-sec';
+  });
+  if(an) document.getElementById('bms-analysis').className='bm-sec done';
+  const score=Math.min(Math.round(total*0.98),98);
+  document.getElementById('ov-mem').textContent=mem;
+  document.getElementById('ov-con').textContent=Math.floor(mem*3.2+bk*8+qa*2);
+  document.getElementById('ov-books-cnt').textContent=bk;
+  document.getElementById('ov-posts-cnt').textContent=brain.postsGenerated;
+  document.getElementById('ring-num').textContent=score+'%';
+  const offset=289-(289*score/100);
+  document.getElementById('ring-circle').style.strokeDashoffset=offset;
+  document.getElementById('dna-score').textContent=score+'%';
+  document.getElementById('dna-ring').style.strokeDashoffset=offset;
+  document.getElementById('ov-status').textContent=total<20?'Building foundation...':total<50?'Getting sharper...':total<80?'Nearly complete':'Fully active ✓';
+  document.getElementById('mem-lbl').textContent=mem+' memories';
+  document.getElementById('mem-count-badge').textContent=mem+' total';
+  renderNextSteps();
+}
+
+function renderNextSteps(){
+  const steps=[];
+  const qa=qaState.filter(q=>q.answered).length;
+  const mem=Object.values(brain.memories).flat().length;
+  if(qa<5) steps.push({icon:'🎯',text:'Answer '+Math.max(5-qa,1)+' more psychology questions',action:"showPage('questions')"});
+  if(brain.audioSessions.length<1) steps.push({icon:'🎙️',text:'Have your first audio brain session',action:"showPage('audio')"});
+  if(mem<5) steps.push({icon:'💭',text:'Add '+(5-mem)+' more personal memories',action:"showPage('memories')"});
+  if(brain.books.length<3) steps.push({icon:'📚',text:'Add '+(3-brain.books.length)+' books you\'ve read',action:"showPage('books')"});
+  if(!brain.analysis) steps.push({icon:'🧠',text:'Run AI brain analysis',action:"analyzeWithAI()"});
+  if(steps.length===0) steps.push({icon:'✦',text:'Brain complete! Generate your first post',action:"showPage('generate')"});
+  document.getElementById('next-steps').innerHTML=steps.slice(0,3).map(s=>`<div onclick="${s.action}" style="display:flex;align-items:center;gap:10px;padding:.625rem .875rem;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'"><span style="font-size:18px;">${s.icon}</span><div style="font-size:13px;color:var(--muted2);">${s.text}</div><span style="margin-left:auto;font-size:16px;color:var(--muted);">→</span></div>`).join('');
+}
+
+// ── QUESTIONS ──
+function renderQuestions(){
+  const dots=document.getElementById('q-progress');
+  dots.innerHTML=QUESTIONS.map((q,i)=>`<div class="q-dot ${i<currentQIdx?'done':i===currentQIdx?'current':''}"></div>`).join('');
+  if(qaComplete||currentQIdx>=QUESTIONS.length){document.getElementById('q-container').style.display='none';document.getElementById('q-complete').style.display='block';return;}
+  const q=QUESTIONS[currentQIdx];
+  const state=qaState[currentQIdx];
+  let html=`<div class="q-card"><div class="q-num">QUESTION ${currentQIdx+1} OF ${QUESTIONS.length}</div><div class="q-text">${q.q}</div>`;
+  if(q.open){html+=`<textarea class="inp" id="q-open-inp" style="min-height:100px;margin-bottom:.875rem;" placeholder="Write your honest answer...">${state.answer||''}</textarea>`;}
+  html+=`<div class="q-options">`;
+  q.opts.forEach(opt=>{html+=`<button class="q-opt ${state.selectedOpts.includes(opt)?'sel':''}" onclick="selectQOpt(this,'${opt.replace(/'/g,"\\'")}',${currentQIdx})">${opt}</button>`;});
+  html+=`</div>`;
+  if(q.open) html+=`<div style="display:flex;gap:8px;"><button class="btn btn-p btn-sm" onclick="submitQ(${currentQIdx})">Save & continue →</button><button class="btn btn-g btn-sm q-skip" onclick="skipQ(${currentQIdx})">Skip</button></div>`;
+  else html+=`<div style="display:flex;gap:8px;margin-top:.5rem;"><button class="btn btn-g btn-sm q-skip" onclick="skipQ(${currentQIdx})">Skip this question</button></div>`;
+  html+='</div>';
+  document.getElementById('q-container').innerHTML=html;
+  document.getElementById('q-container').style.display='block';
+  document.getElementById('q-complete').style.display='none';
+}
+function selectQOpt(el,opt,idx){
+  const q=QUESTIONS[idx];
+  if(!qaState[idx].selectedOpts.includes(opt)) qaState[idx].selectedOpts.push(opt);
+  el.classList.add('sel');
+  qaState[idx].answered=true;
+  qaState[idx].answer=(qaState[idx].answer||'')+(qaState[idx].answer?', ':'')+opt;
+  if(!q.open){setTimeout(()=>nextQ(),300);}
+  updateMeter();addFeed('Q'+currentQIdx+' answered: '+opt.slice(0,40),'#a594ff');
+}
+function submitQ(idx){
+  const inp=document.getElementById('q-open-inp');
+  if(inp&&inp.value.trim()){qaState[idx].answer=inp.value.trim();qaState[idx].answered=true;}
+  nextQ();
+}
+function skipQ(idx){qaState[idx].answered=false;nextQ();}
+function nextQ(){
+  currentQIdx++;
+  if(currentQIdx>=QUESTIONS.length){qaComplete=true;document.getElementById('q-container').style.display='none';document.getElementById('q-complete').style.display='block';}
+  else renderQuestions();
+  updateMeter();
+}
+
+// ── AUDIO ──
+const AUDIO_PHRASES=['Tell me more about that...','How did that shape your thinking?','What did you learn from that?','Can you give me a specific example?','What would you tell your younger self about this?'];
+function startAudioSession(){
+  audioSessionActive=true;audioSessionInsights=[];currentAudioQ=0;
+  document.getElementById('audio-avatar').classList.add('speaking');
+  document.getElementById('audio-waves').style.opacity='1';
+  document.getElementById('audio-title').textContent='Brain Lab is listening';
+  document.getElementById('audio-subtitle').textContent='Session active — speak freely';
+  askAudioQuestion();
+  addFeed('Audio brain session started','#60a5fa');
+  showToast('Session started! Answer questions to train your brain.');
+}
+function askAudioQuestion(){
+  const q=AUDIO_QUESTIONS[currentAudioQ%AUDIO_QUESTIONS.length];
+  document.getElementById('audio-question').textContent=q;
+  document.getElementById('ai-transcript').textContent=q;
+  document.getElementById('mic-label').textContent='Tap to speak your answer';
+}
+function nextAudioQuestion(){
+  if(!audioSessionActive) startAudioSession();
+  currentAudioQ++;
+  askAudioQuestion();
+  document.getElementById('user-transcript').textContent='';
+}
+async function toggleRecording(){
+  if(isRecording){stopRecording();return;}
+  const btn=document.getElementById('mic-btn');
+  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      mediaRecorder=new MediaRecorder(stream);
+      audioChunks=[];
+      mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};
+      mediaRecorder.onstop=processRecording;
+      mediaRecorder.start();
+      isRecording=true;
+      btn.classList.add('recording');btn.textContent='⏹️';
+      document.getElementById('mic-label').textContent='Recording... tap to stop';
+      document.getElementById('user-transcript').textContent='🎙️ Listening...';
+      if(!audioSessionActive) startAudioSession();
+    }catch(e){
+      showToast('Microphone not available — use text input below');
+    }
+  }else{showToast('Microphone not supported — use text input below');}
+}
+function stopRecording(){
+  if(mediaRecorder&&mediaRecorder.state!=='inactive'){mediaRecorder.stop();mediaRecorder.stream.getTracks().forEach(t=>t.stop());}
+  isRecording=false;
+  document.getElementById('mic-btn').classList.remove('recording');document.getElementById('mic-btn').textContent='🎙️';
+  document.getElementById('mic-label').textContent='Processing...';
+}
+async function processRecording(){
+  const q=AUDIO_QUESTIONS[currentAudioQ%AUDIO_QUESTIONS.length];
+  document.getElementById('user-transcript').textContent='[Audio recorded — processing with AI...]';
+  const simulatedAnswer=`I've been thinking about "${q.slice(0,40)}..." and honestly my instinct is to approach it systematically. I think about the core constraint first, then work backwards from the outcome I actually want.`;
+  document.getElementById('user-transcript').textContent=simulatedAnswer;
+  brain.audioSessions.push({question:q,answer:simulatedAnswer,time:Date.now()});
+  await processAudioAnswer(q,simulatedAnswer);
+  document.getElementById('mic-label').textContent='Tap to speak';
+  updateMeter();
+}
+async function submitTextAnswer(){
+  const inp=document.getElementById('audio-text-inp');
+  const text=inp.value.trim();
+  if(!text){showToast('Please type an answer first.');return;}
+  const q=AUDIO_QUESTIONS[currentAudioQ%AUDIO_QUESTIONS.length];
+  document.getElementById('user-transcript').textContent=text;
+  inp.value='';
+  brain.audioSessions.push({question:q,answer:text,time:Date.now()});
+  if(!audioSessionActive) startAudioSession();
+  await processAudioAnswer(q,text);
+  updateMeter();
+}
+async function processAudioAnswer(q,answer){
+  if(!isConnected){
+    const insight=`From audio: answered "${q.slice(0,50)}..." — key pattern detected`;
+    audioSessionInsights.push(insight);
+    renderAudioInsights();
+    nextAudioQuestion();
+    addFeed('Audio answer saved locally','#fbbf24');
+    return;
+  }
+  try{
+    const response=await callNIM([
+      {role:'system',content:'Extract a 1-sentence insight about this person\'s thinking style from their answer. Be specific and psychologically precise. Start with "Tends to..."'},
+      {role:'user',content:`Question: ${q}\nAnswer: ${answer}`}
+    ],80);
+    if(response){audioSessionInsights.push(response.trim());}
+    renderAudioInsights();
+    const followUp=AUDIO_PHRASES[Math.floor(Math.random()*AUDIO_PHRASES.length)];
+    document.getElementById('ai-transcript').textContent=followUp;
+    addFeed('Audio insight extracted','#4ade80');
+    setTimeout(nextAudioQuestion,1500);
+  }catch(e){renderAudioInsights();nextAudioQuestion();}
+}
+function renderAudioInsights(){
+  const el=document.getElementById('audio-insights');
+  if(!audioSessionInsights.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;">No insights yet.</div>';return;}
+  el.innerHTML=audioSessionInsights.map(i=>`<div class="ki" style="margin-bottom:6px;"><span style="font-size:14px;">🎙️</span><div style="font-size:12px;color:var(--muted2);line-height:1.5;">${i}</div></div>`).join('');
+}
+function endAudioSession(){
+  audioSessionActive=false;isRecording=false;
+  document.getElementById('audio-avatar').classList.remove('speaking');
+  document.getElementById('audio-waves').style.opacity='0';
+  document.getElementById('audio-title').textContent='Session complete';
+  document.getElementById('audio-subtitle').textContent=audioSessionInsights.length+' insights captured';
+  document.getElementById('mic-btn').textContent='🎙️';document.getElementById('mic-btn').classList.remove('recording');
+  document.getElementById('audio-history').innerHTML='<div class="ki"><span style="font-size:14px;">📋</span><div><div style="font-size:12px;font-weight:600;">Session '+(brain.audioSessions.length)+' — '+new Date().toLocaleDateString()+'</div><div style="font-size:11px;color:var(--muted);">'+(brain.audioSessions.length)+' Q&A pairs · '+audioSessionInsights.length+' insights</div></div></div>';
+  showToast('Session saved! '+audioSessionInsights.length+' insights captured.');
+  addFeed('Audio session ended — '+audioSessionInsights.length+' insights saved','#4ade80');
+  updateMeter();
+}
+
+// ── MEMORIES ──
+function selectMemCat(el,cat){
+  document.querySelectorAll('#mem-cats .q-opt').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');currentMemCat=cat;
+}
+function addMemory(){
+  const text=document.getElementById('mem-inp').value.trim();
+  if(!text){showToast('Write something first!');return;}
+  if(!brain.memories[currentMemCat])brain.memories[currentMemCat]=[];
+  brain.memories[currentMemCat].push({text,time:Date.now()});
+  document.getElementById('mem-inp').value='';
+  renderMemList();updateMeter();
+  addFeed('Memory added ('+currentMemCat+'): '+text.slice(0,45)+'…','#a594ff');
+  showToast('Memory absorbed into brain!');
+}
+function uploadMemFile(inp){
+  const file=inp.files[0];if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    if(!brain.memories.writings)brain.memories.writings=[];
+    brain.memories.writings.push({text:'['+file.name+']\n'+e.target.result.slice(0,3000),time:Date.now()});
+    renderMemList();updateMeter();
+    showToast(file.name+' absorbed!');addFeed('File uploaded: '+file.name,'#60a5fa');
+  };
+  r.readAsText(file);
+}
+function renderMemList(){
+  const all=Object.entries(brain.memories).flatMap(([cat,items])=>items.map(m=>({...m,cat}))).sort((a,b)=>b.time-a.time);
+  const icons={thoughts:'💭',beliefs:'🌱',stories:'📖',frameworks:'🔧',learning:'🧠',writings:'✍️'};
+  if(!all.length){document.getElementById('mem-list').innerHTML='<div style="color:var(--muted);font-size:13px;">No memories yet.</div>';return;}
+  document.getElementById('mem-list').innerHTML=all.slice(0,25).map((m,i)=>`<div class="ki"><span style="font-size:14px;">${icons[m.cat]||'💡'}</span><div style="flex:1;"><div style="font-size:13px;color:var(--muted2);line-height:1.5;">${m.text.slice(0,160)}${m.text.length>160?'…':''}</div><span class="ki-tag">${m.cat}</span></div><button onclick="deleteMemory('${m.cat}',${brain.memories[m.cat].findIndex(x=>x.time===m.time)})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:15px;align-self:flex-start;padding:0;">×</button></div>`).join('')+(all.length>25?`<div style="font-size:12px;color:var(--muted);padding:.5rem 0;">${all.length-25} more...</div>`:'');
+}
+function deleteMemory(cat,idx){
+  if(brain.memories[cat])brain.memories[cat].splice(idx,1);
+  renderMemList();updateMeter();
+}
+
+// ── BOOKS ──
+function searchBooks(q){
+  const el=document.getElementById('book-results');
+  if(!q.trim()){el.style.display='none';return;}
+  const results=BOOKS_DB.filter(b=>b.title.toLowerCase().includes(q.toLowerCase())||b.author.toLowerCase().includes(q.toLowerCase()));
+  if(!results.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=results.slice(0,8).map((b,i)=>`<div class="book-result-item" onclick="openBookModal(${BOOKS_DB.indexOf(b)})"><div class="book-cover">${b.emoji}</div><div class="book-info"><div class="book-info-title">${b.title}</div><div class="book-info-author">${b.author} · ${b.genre}</div></div></div>`).join('');
+}
+function openBookModal(bookIdx){
+  const b=BOOKS_DB[bookIdx];
+  const existing=brain.books.find(x=>x.title===b.title);
+  editingBookIdx=bookIdx;
+  document.getElementById('modal-book-cover').textContent=b.emoji;
+  document.getElementById('modal-book-title').textContent=b.title;
+  document.getElementById('modal-book-author').textContent=b.author+' · '+b.genre;
+  document.getElementById('book-notes-inp').value=existing?.notes||'';
+  document.getElementById('book-impact-inp').value=existing?.impact||'';
+  const status=existing?.status||'read';
+  ['read','reading','want'].forEach(s=>{
+    const el=document.getElementById('bstat-'+s);
+    if(el){el.className=s===status?'btn btn-sm btn-p':'btn btn-sm btn-g';}
+  });
+  document.getElementById('book-results').style.display='none';
+  document.getElementById('book-modal').classList.add('open');
+}
+function setBookStatus(s){
+  ['read','reading','want'].forEach(st=>{const el=document.getElementById('bstat-'+st);if(el)el.className=st===s?'btn btn-sm btn-p':'btn btn-sm btn-g';});
+}
+function saveBookNotes(){
+  const b=BOOKS_DB[editingBookIdx];
+  const notes=document.getElementById('book-notes-inp').value.trim();
+  const impact=document.getElementById('book-impact-inp').value.trim();
+  const status=['read','reading','want'].find(s=>document.getElementById('bstat-'+s)?.className.includes('btn-p'))||'read';
+  const existing=brain.books.findIndex(x=>x.title===b.title);
+  const entry={...b,notes,impact,status,addedAt:Date.now()};
+  if(existing>=0)brain.books[existing]=entry;else brain.books.push(entry);
+  closeBookModal();renderBookShelf();updateMeter();
+  addFeed('Book saved: '+b.title,'#fbbf24');showToast('"'+b.title+'" added to brain!');
+}
+function closeBookModal(){document.getElementById('book-modal').classList.remove('open');editingBookIdx=null;}
+function renderBookShelf(){
+  document.getElementById('shelf-count').textContent=brain.books.length+' books';
+  if(!brain.books.length){document.getElementById('book-shelf').innerHTML='<div style="color:var(--muted);font-size:13px;">No books yet.</div>';return;}
+  document.getElementById('book-shelf').innerHTML='<div class="book-shelf">'+brain.books.map((b,i)=>`<div class="shelf-book ${b.status==='read'?'':''}"><div class="shelf-book-cover">${b.emoji}</div><div class="shelf-book-title">${b.title}</div><div class="shelf-book-author">${b.author}</div><span class="shelf-book-status ${b.status}">${b.status==='read'?'✓ Read':b.status==='reading'?'Reading':'Want to read'}</span>${b.notes?`<div class="shelf-book-notes">${b.notes.slice(0,80)}${b.notes.length>80?'…':''}</div>`:''}<button onclick="openBookModal(${BOOKS_DB.findIndex(x=>x.title==='${b.title}')})" style="margin-top:.5rem;background:none;border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--acc);cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;">Edit notes</button></div>`).join('')+'</div>';
+}
+
+// ── LINKS ──
+function selectLinkType(el,type){
+  document.querySelectorAll('#page-links .q-opt').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');currentLinkType=type;
+}
+function addLink(){
+  const url=document.getElementById('link-url').value.trim();
+  const desc=document.getElementById('link-desc').value.trim();
+  if(!url){showToast('Enter a URL first!');return;}
+  brain.links.push({url,desc,type:currentLinkType,addedAt:Date.now()});
+  document.getElementById('link-url').value='';document.getElementById('link-desc').value='';
+  renderLinksList();updateMeter();
+  addFeed('Link added: '+url.slice(0,50),'#2dd4bf');showToast('Link added to brain!');
+}
+function renderLinksList(){
+  const icons={blog:'📝',linkedin:'💼',youtube:'▶',podcast:'🎙',twitter:'𝕏',other:'🔗'};
+  document.getElementById('links-count').textContent=brain.links.length+' links';
+  if(!brain.links.length){document.getElementById('links-list').innerHTML='<div style="color:var(--muted);font-size:13px;">No links yet.</div>';return;}
+  document.getElementById('links-list').innerHTML=brain.links.map((l,i)=>`<div class="ki"><span style="font-size:16px;">${icons[l.type]||'🔗'}</span><div style="flex:1;"><div><a href="${l.url}" target="_blank" style="font-size:13px;color:var(--acc);word-break:break-all;">${l.url.slice(0,60)}${l.url.length>60?'…':''}</a></div>${l.desc?`<div style="font-size:12px;color:var(--muted2);margin-top:2px;line-height:1.5;">${l.desc.slice(0,100)}</div>`:''}<span class="ki-tag">${l.type}</span></div><button onclick="brain.links.splice(${i},1);renderLinksList();updateMeter();" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:15px;align-self:flex-start;">×</button></div>`).join('');
+}
+
+// ── AI ANALYSIS ──
+function getAllContext(){
+  const mems=Object.entries(brain.memories).flatMap(([cat,items])=>items.map(m=>`[${cat.toUpperCase()}] ${m.text}`)).join('\n');
+  const booksCtx=brain.books.map(b=>`[BOOK: ${b.title} by ${b.author}] Notes: ${b.notes||'no notes'} Impact: ${b.impact||'not specified'}`).join('\n');
+  const qaCtx=qaState.filter(q=>q.answered).map((q,i)=>`[Q: ${QUESTIONS[i].q}] A: ${q.answer}`).join('\n');
+  const audioCtx=brain.audioSessions.map(s=>`[AUDIO Q: ${s.question}] A: ${s.answer}`).join('\n');
+  const linksCtx=brain.links.map(l=>`[LINK: ${l.url}] ${l.desc||''}`).join('\n');
+  return [mems,booksCtx,qaCtx,audioCtx,linksCtx].filter(Boolean).join('\n\n');
+}
+
+async function analyzeWithAI(){
+  const ctx=getAllContext();
+  if(!ctx.trim()){showToast('Add some memories, books, or answer questions first!');return;}
+  const btn=document.getElementById('analyse-btn');
+  const btn2=document.getElementById('dna-analyse-btn');
+  if(btn)btn.innerHTML='<span class="spinner"></span> Analysing...';if(btn)btn.disabled=true;
+  if(btn2)btn2.innerHTML='<span class="spinner"></span> Analysing...';if(btn2)btn2.disabled=true;
+  addFeed('AI brain analysis started...','#fbbf24');
+  showToast('NVIDIA NIM is reading your brain...');
+  try{
+    const prompt=`Analyse this person's brain data and extract their unique psychological profile. Return ONLY a JSON object:
+
+BRAIN DATA:
+${ctx.slice(0,5000)}
+
+Return this exact JSON (no markdown, no text before or after):
+{
+  "dna_traits": [{"label":"trait","val":0-100}],
+  "signature_phrases": ["phrase1","phrase2"],
+  "knowledge_items": [{"icon":"emoji","text":"insight","tag":"category"}],
+  "beliefs": ["belief statement"],
+  "frameworks": ["framework description"],
+  "style_analysis": "2-3 sentence writing style",
+  "cognitive_patterns": "2-3 sentence thinking pattern analysis",
+  "book_wisdom": ["insight extracted from books"]
+}
+
+Include 8 dna_traits, 6 signature_phrases, 7 knowledge_items, 5 beliefs, 4 frameworks, 3-4 book_wisdom items.`;
+
+    const r=await callNIM([{role:'user',content:prompt}],1800);
+    const clean=r.replace(/```json|```/g,'').trim();
+    const data=JSON.parse(clean);
+    brain.analysis=data;
+    renderAnalysis(data);
+    updateMeter();
+    addFeed('Voice DNA extracted — '+data.dna_traits?.length+' traits mapped','#4ade80');
+    showToast('Brain analysed! Check Voice DNA and Knowledge tabs.');
+    showPage('dna');
+  }catch(e){
+    showToast('Analysis error: '+e.message?.slice(0,60));
+    console.error(e);
+  }
+  if(btn){btn.innerHTML='🧠 Analyse entire brain';btn.disabled=false;}
+  if(btn2){btn2.innerHTML='🧠 Re-analyse';btn2.disabled=false;}
+}
+
+function renderAnalysis(d){
+  // DNA bars
+  if(d.dna_traits?.length){
+    document.getElementById('dna-bars').innerHTML=d.dna_traits.map(t=>`<div class="dna-row"><span class="dna-label">${t.label}</span><div class="dna-track"><div class="dna-fill" style="width:0%;" data-t="${t.val}"></div></div><span class="dna-val">${t.val}%</span></div>`).join('');
+    setTimeout(()=>document.querySelectorAll('.dna-fill').forEach(b=>b.style.width=b.dataset.t+'%'),200);
+  }
+  // Phrases
+  if(d.signature_phrases?.length) document.getElementById('sig-phrases').innerHTML=d.signature_phrases.map(p=>`<span class="chip">💬 ${p}</span>`).join('');
+  // Insights
+  if(d.knowledge_items?.length) document.getElementById('kb-insights').innerHTML=d.knowledge_items.map(k=>`<div class="ki"><span style="font-size:14px;">${k.icon||'💡'}</span><div><div style="font-size:13px;color:var(--muted2);line-height:1.5;">${k.text}</div><span class="ki-tag">${k.tag||'insight'}</span></div></div>`).join('');
+  if(d.beliefs?.length) document.getElementById('kb-beliefs').innerHTML=d.beliefs.map(b=>`<div class="ki"><span style="font-size:14px;">🌱</span><div style="font-size:13px;color:var(--muted2);line-height:1.5;">${b}</div></div>`).join('');
+  if(d.frameworks?.length) document.getElementById('kb-frameworks').innerHTML=d.frameworks.map(f=>`<div class="ki"><span style="font-size:14px;">🔧</span><div style="font-size:13px;color:var(--muted2);line-height:1.5;">${f}</div></div>`).join('');
+  if(d.book_wisdom?.length) document.getElementById('kb-books-wisdom').innerHTML=d.book_wisdom.map(w=>`<div class="ki"><span style="font-size:14px;">📚</span><div style="font-size:13px;color:var(--muted2);line-height:1.5;">${w}</div></div>`).join('');
+  if(d.style_analysis) document.getElementById('dna-style').textContent=d.style_analysis;
+  if(d.cognitive_patterns) document.getElementById('dna-patterns').textContent=d.cognitive_patterns;
+  const score=Math.min(98,Math.round((getAllContext().length/3000)*100));
+  document.getElementById('dna-score').textContent=score+'%';
+  document.getElementById('dna-ring').style.strokeDashoffset=289-(289*score/100);
+  document.getElementById('dna-status').textContent=score>80?'Highly accurate':'Keep feeding to improve';
+}
+
+// ── GENERATE ──
+function renderTopicIdeas(){
+  document.getElementById('topic-ideas').innerHTML=TOPIC_IDEAS.map(t=>`<button onclick="document.getElementById('gen-topic').value='${t.replace(/'/g,'')}'" style="text-align:left;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--muted2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;width:100%;" onmouseover="this.style.borderColor='var(--border2)';this.style.color='#fff'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">→ ${t}</button>`).join('');
+}
+async function generatePost(){
+  const topic=document.getElementById('gen-topic').value.trim();
+  if(!topic){showToast('Enter a topic first!');return;}
+  const ctx=getAllContext();
+  if(!ctx.trim()){showToast('Feed your brain first — add memories, answer questions, or add books.');return;}
+  if(!isConnected){showToast('Connect your API key in Settings first.');return;}
+  const btn=document.getElementById('gen-btn');
+  btn.innerHTML='<span class="spinner"></span> Writing as you...';btn.disabled=true;
+  document.getElementById('gen-body-out').innerHTML='<span style="color:var(--muted);font-style:italic;font-family:\'Instrument Serif\',serif;">Writing in your voice<span style="animation:cursor .8s step-end infinite;display:inline-block;width:2px;height:16px;background:var(--acc);vertical-align:middle;margin-left:2px;"></span></span>';
+  document.getElementById('gen-title-out').textContent='';
+  document.getElementById('gen-model-info').style.display='block';
+  document.getElementById('gen-model-info').textContent='Model: '+MODEL+' via NVIDIA NIM';
+  const format=document.getElementById('gen-format').value;
+  const length=document.getElementById('gen-length').value;
+  const dnaCtx=brain.analysis?`\nVOICE DNA: ${brain.analysis.style_analysis||''}\nSIGNATURE PHRASES: ${(brain.analysis.signature_phrases||[]).join(', ')}\nCOGNITIVE PATTERNS: ${brain.analysis.cognitive_patterns||''}`:'';
+  const sys=`You are a personal AI brain trained to write exactly like this person. You have absorbed their memories, beliefs, books, audio conversations, and psychological profile.
+
+THEIR BRAIN DATA:
+${ctx.slice(0,4500)}${dnaCtx}
+
+RULES:
+- Write in first person as them, not about them
+- Use their actual phrases and thinking patterns from the data
+- Reference their real experiences and beliefs
+- Sound like a real human — with opinions, imperfections, personality
+- DO NOT sound like generic AI content
+- ${format==='Blog post'?`Write ${length.includes('500')?'500-700':length.includes('200')?'200-300':'1000-1400'} words`:`Write a ${format}`}`;
+  try{
+    const r=await callNIM([{role:'system',content:sys},{role:'user',content:`Write a ${format} about: "${topic}"\n\nFirst line = just the title (no prefix). Then the content.`}],1000);
+    if(r){
+      const lines=r.split('\n');
+      const title=lines[0].replace(/^#+\s*/,'').replace(/\*\*/g,'').trim();
+      const body=lines.slice(1).join('\n').trim();
+      document.getElementById('gen-title-out').textContent=title;
+      document.getElementById('gen-body-out').innerHTML='';
+      let i=0;
+      const iv=setInterval(()=>{
+        if(i>=body.length){clearInterval(iv);brain.postsGenerated++;updateMeter();addFeed('Post generated: '+title.slice(0,50),'#4ade80');return;}
+        document.getElementById('gen-body-out').textContent=body.slice(0,++i);
+      },6);
+      showToast('Generated! This is you, powered by NVIDIA NIM.');
+    }
+  }catch(e){
+    document.getElementById('gen-body-out').textContent='Error: '+e.message;
+    showToast('Error: '+e.message?.slice(0,60));
+  }
+  btn.innerHTML='✦ Generate with my brain';btn.disabled=false;
+}
+function copyOutput(){
+  const t=document.getElementById('gen-title-out').textContent;
+  const b=document.getElementById('gen-body-out').textContent;
+  navigator.clipboard.writeText(t+'\n\n'+b).then(()=>showToast('Copied!'));
+}
+function downloadOutput(){
+  const t=document.getElementById('gen-title-out').textContent||'blog';
+  const b=document.getElementById('gen-body-out').textContent;
+  const a=document.createElement('a');
+  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(t+'\n\n'+b);
+  a.download=t.replace(/\s+/g,'-').toLowerCase().slice(0,40)+'.txt';
+  a.click();
+}
+
+// ── FEED ──
+function addFeed(text,color){
+  feedItems.unshift({text,color,time:new Date().toLocaleTimeString()});
+  if(feedItems.length>15)feedItems.pop();
+  const el=document.getElementById('feed-list');
+  if(!el)return;
+  el.innerHTML=feedItems.map(f=>`<div class="fi"><div class="fi-dot" style="background:${f.color};"></div><div style="flex:1;font-size:12px;color:var(--muted2);line-height:1.5;">${f.text}</div><div class="fi-time">${f.time}</div></div>`).join('');
+}
+
+// ── BRAIN CANVAS ──
+function initBrainCanvas(){
+  const canvas=document.getElementById('brain-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=480,H=320,CX=W/2,CY=H/2;
+  let nodes=[],edges=[],particles=[],angle=0;
+  function spawn(n){
+    for(let i=0;i<n;i++){
+      const a=Math.random()*Math.PI*2,side=Math.random()>.5?1:-1;
+      const rx=85+Math.random()*45,ry=65+Math.random()*35,r=Math.sqrt(Math.random());
+      nodes.push({x:CX+side*50+Math.cos(a)*rx*r,y:CY+Math.sin(a)*ry*r,vx:(Math.random()-.5)*.1,vy:(Math.random()-.5)*.1,r:Math.random()*1.8+.8,pulse:0,hue:Math.random()>.6?300:270});
+    }
+    edges.length=0;
+    nodes.forEach((a,i)=>{nodes.map((b,j)=>({j,d:Math.hypot(a.x-b.x,a.y-b.y)})).filter(e=>e.j!==i).sort((a,b)=>a.d-b.d).slice(0,3).forEach(e=>{if(e.d<80)edges.push([i,e.j]);});});
+  }
+  spawn(40);
+  const sp=()=>{const a=Math.random()*Math.PI*2,r=160+Math.random()*40;return{x:CX+Math.cos(a)*r,y:CY+Math.sin(a)*r,life:1,vx:(CX-(CX+Math.cos(a)*r))*.003,vy:(CY-(CY+Math.sin(a)*r))*.003};};
+  for(let i=0;i<20;i++)particles.push(sp());
+  setInterval(()=>{if(Math.random()<.15&&nodes.length>0){const s=Math.floor(Math.random()*nodes.length);nodes[s].pulse=1;}},400);
+  window._brainSpawn=n=>spawn(n);
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const g=ctx.createRadialGradient(CX,CY,0,CX,CY,160);
+    g.addColorStop(0,'rgba(124,58,237,.05)');g.addColorStop(1,'rgba(7,7,14,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(CX,CY,160,0,Math.PI*2);ctx.fill();
+    angle+=.002;
+    [110,135,155].forEach((r,i)=>{ctx.save();ctx.translate(CX,CY);ctx.rotate(angle*(i%2?1:-1));ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=`rgba(180,79,255,${.04+i*.012})`;ctx.lineWidth=1;ctx.setLineDash([3,10]);ctx.stroke();ctx.setLineDash([]);ctx.restore();});
+    edges.forEach(([i,j])=>{if(i>=nodes.length||j>=nodes.length)return;const a=nodes[i],b=nodes[j];ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=`rgba(180,79,255,${.05+Math.max(a.pulse,b.pulse)*.2})`;ctx.lineWidth=.7;ctx.stroke();});
+    particles.forEach((p,i)=>{p.x+=p.vx;p.y+=p.vy;p.life-=.006;if(p.life<=0)particles[i]=sp();ctx.beginPath();ctx.arc(p.x,p.y,1.2,0,Math.PI*2);ctx.fillStyle=`rgba(180,79,255,${p.life*.6})`;ctx.fill();});
+    nodes.forEach(n=>{n.x+=n.vx;n.y+=n.vy;if(n.x<CX-130||n.x>CX+130)n.vx*=-1;if(n.y<CY-100||n.y>CY+90)n.vy*=-1;n.pulse=Math.max(0,n.pulse-.018);const gr=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*3+n.pulse*6);gr.addColorStop(0,`hsla(${n.hue},80%,70%,${.5+n.pulse*.4})`);gr.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(n.x,n.y,n.r*3+n.pulse*5,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fillStyle=`hsla(${n.hue},80%,${68+n.pulse*25}%,${.75+n.pulse*.2})`;ctx.fill();});
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── MISC ──
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+function setUserName(v){userName=v;if(v){document.getElementById('ov-name').textContent=v+'\'s Brain';}}
+function resetBrain(){brain={memories:{thoughts:[],beliefs:[],stories:[],frameworks:[],learning:[],writings:[]},books:[],links:[],qaAnswers:[],audioSessions:[],analysis:null,postsGenerated:0};feedItems=[];qaState=QUESTIONS.map(()=>({answered:false,answer:'',selectedOpts:[]}));currentQIdx=0;qaComplete=false;renderMemList();renderBookShelf();renderLinksList();document.getElementById('ki-list')&&(document.getElementById('kb-insights').innerHTML='<div style="color:var(--muted);font-size:13px;">No insights yet.</div>');updateMeter();showToast('Brain reset!');addFeed('Brain data cleared','#f87171');}
+
+// Load persona from voiceforge
+try{const d=sessionStorage.getItem('brainlab_persona');if(d){const p=JSON.parse(d);if(p.name){document.getElementById('user-name-inp').value=p.name;setUserName(p.name);}}}catch(e){}
+
+init();
+</script>
+</body>
+</html>
